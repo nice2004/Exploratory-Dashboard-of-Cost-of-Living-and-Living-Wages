@@ -508,7 +508,7 @@ def update_dashboard(borough, sqft_range, selected_year):
     line_fig = go.Figure()
 
     metrics = {
-        "Annual Income": {"column": "Income", "color": COLORS["Income"]},
+       # "Annual Income": {"column": "Income", "color": COLORS["Income"]},
         # "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]},
         "Transportation": {"column": "Transportation_Expense", "color": COLORS["Transportation"]},
         "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]}
