@@ -13,7 +13,6 @@ def load_data():
     data_set3 = pd.read_excel('Median-Income-Dataset.xlsx', sheet_name='Annual')
     data_set4 = pd.read_csv('NY-House-Dataset.csv')
 
-    # Ensure consistent date format
     for df in [data_set1, data_set2, data_set3]:
         if 'observation_date' in df.columns:
             df['observation_date'] = pd.to_datetime(df['observation_date']).dt.year
@@ -22,8 +21,6 @@ def load_data():
     merged_dataset = pd.merge(data_set1, data_set2, on='observation_date', how='outer')
     merged_dataset = pd.merge(merged_dataset, data_set3, on='observation_date', how='outer')
 
-    # Cross join with housing data
-    # Using a more efficient method than cross join to prevent memory issues
     years = merged_dataset['observation_date'].unique()
     housing_years = []
 
@@ -249,7 +246,7 @@ tabs = dbc.Tabs([
                             ], className='mb-3'),
                             dbc.Button('Find My county', id='predict-button', color='primary', className='mt-3')
                         ])
-                    ], width =6),
+                    ], width=6),
                     dbc.Col([
                         html.Div(id='prediction-results', className='mt-4')
                     ], width=6)
@@ -423,6 +420,8 @@ def predict_county(n_clicks, income, goods, transport):
         )
 
     return results
+
+
 @callback(
     [Output("expense-chart", "figure"),
      Output("historical-trend", "figure"),
@@ -504,26 +503,35 @@ def update_dashboard(borough, sqft_range, selected_year):
         margin=dict(t=100, b=50, l=50, r=50)
     )
 
-    # Create historical trend chart - LINE CHART (Housing, Durable Goods, Income, Transport)
     line_fig = go.Figure()
 
+    # Fix the value for "Housing Price" (e.g., use a static constant like the median or a specific number)
+    constant_housing_price = historical_data["PRICE"].median()  # Use median or any fixed value for stability
+
     metrics = {
-       # "Annual Income": {"column": "Income", "color": COLORS["Income"]},
-        # "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]},
-        "Transportation": {"column": "Transportation_Expense", "color": COLORS["Transportation"]},
+        "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]},
         "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]}
     }
 
+    # Create traces with corrected logic
     for label, info in metrics.items():
+        if label == "Housing Price":
+            # Use constant value for Housing Price across all years
+            y_values = [constant_housing_price] * len(historical_data["observation_date"])
+        else:
+            # Use dynamic column values for other metrics
+            y_values = historical_data[info["column"]]
+
         line_fig.add_trace(go.Scatter(
             x=historical_data["observation_date"],
-            y=historical_data[info["column"]],
+            y=y_values,
             mode="lines+markers",
             name=label,
             line=dict(color=info["color"], width=3),
             marker=dict(size=8)
         ))
 
+    # Update layout for the figure
     line_fig.update_layout(
         title="Historical Trends",
         height=400,
