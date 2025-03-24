@@ -4,6 +4,7 @@ from dash import Dash, dcc, html, dash_table, Input, Output, callback
 import plotly.graph_objects as go
 from Words_in_tabs import About_text, Fun_Wonder_Text, footer
 import plotly.express as px
+from dash.dependencies import Input, Output
 
 
 def load_data():
@@ -209,6 +210,57 @@ tabs = dbc.Tabs([
 
     dbc.Tab([
         dbc.Card([
+            dbc.CardHeader('County Predictor'),
+            dbc.CardBody([
+                dbc.Row([
+                    dbc.Col([
+                        html.H4('Find your Potential NYC County', className='mb-4'),
+                        dbc.Form([
+                            dbc.CardGroup([
+                                dbc.Label('Annual Income ($)'),
+                                dbc.Input(
+                                    id='income-input',
+                                    type='number',
+                                    placeholder='Enter annual income',
+                                    min=0,
+                                    step=10000
+                                )
+                            ], className='mb-3'),
+                            dbc.CardGroup([
+                                dbc.Label('Annual Durable Goods Expenses ($)'),
+                                dbc.Input(
+                                    id='goods-input',
+                                    type='number',
+                                    placeholder='Enter annual goods expenses',
+                                    min=0,
+                                    step=100
+                                )
+                            ], className='mb-3'),
+                            dbc.CardGroup([
+                                dbc.Label('Annual Transportation  Expenses ($)'),
+                                dbc.Input(
+                                    id='transport-input',
+                                    type='number',
+                                    placeholder='Entre annual transportation expense',
+                                    min=0,
+                                    step=100
+                                )
+
+                            ], className='mb-3'),
+                            dbc.Button('Find My county', id='predict-button', color='primary', className='mt-3')
+                        ])
+                    ], width =6),
+                    dbc.Col([
+                        html.Div(id='prediction-results', className='mt-4')
+                    ], width=6)
+                ])
+            ])
+
+        ], className='mt-3')
+    ], tab_id='predictor-tab', label='County Predictor'),
+
+    dbc.Tab([
+        dbc.Card([
             dbc.CardBody([Fun_Wonder_Text])
         ], className="mt-3"),
         filter_card,
@@ -298,6 +350,79 @@ def empty_line_chart():
 
 # Callbacks
 # Define callback to update the layout and charts
+
+@callback(
+    Output("prediction-results", "children"),
+    [Input("predict-button", "n_clicks")],
+    [
+        Input("income-input", "value"),
+        Input("goods-input", "value"),
+        Input("transport-input", "value")
+    ],
+    prevent_initial_call=True
+)
+def predict_county(n_clicks, income, goods, transport):
+    if not all([income, goods, transport]):
+        return dbc.Alert("Please fill in all input fields.", color="warning")
+
+    # Find the closest matches in the dataset
+    def find_closest_match(input_value, column):
+        differences = abs(merged_dataset[column] - input_value)
+        closest_index = differences.idxmin()
+        return merged_dataset.loc[closest_index, 'SUBLOCALITY'], merged_dataset.loc[closest_index, column]
+
+    # Find closest counties for each input
+    income_county, income_match = find_closest_match(income, 'Income')
+    goods_county, goods_match = find_closest_match(goods, 'Durable_Goods')
+    transport_county, transport_match = find_closest_match(transport, 'Transportation_Expense')
+
+    # Create results
+    results = [
+        dbc.Card([
+            dbc.CardHeader("Prediction Results", className="text-center"),
+            dbc.CardBody([
+                html.H5("Based on Your Inputs:", className="card-title mb-3"),
+
+                dbc.Row([
+                    dbc.Col([
+                        html.H6("Income Prediction", className="text-muted"),
+                        html.P(f"County: {income_county}"),
+                        html.P(f"Matched Income: ${income_match:,.0f}")
+                    ], width=4),
+
+                    dbc.Col([
+                        html.H6("Goods Expenses Prediction", className="text-muted"),
+                        html.P(f"County: {goods_county}"),
+                        html.P(f"Matched Goods Expenses: ${goods_match:,.0f}")
+                    ], width=4),
+
+                    dbc.Col([
+                        html.H6("Transportation Expenses Prediction", className="text-muted"),
+                        html.P(f"County: {transport_county}"),
+                        html.P(f"Matched Transport Expenses: ${transport_match:,.0f}")
+                    ], width=4)
+                ])
+            ])
+        ], className="mt-3")
+    ]
+
+    # Additional context based on the predictions
+    if len(set([income_county, goods_county, transport_county])) == 1:
+        results.append(
+            dbc.Alert(
+                f"Interesting! All your inputs closely match the data for {income_county} County.",
+                color="success"
+            )
+        )
+    else:
+        results.append(
+            dbc.Alert(
+                "Your inputs match different counties. This could indicate variations in living costs across NYC.",
+                color="info"
+            )
+        )
+
+    return results
 @callback(
     [Output("expense-chart", "figure"),
      Output("historical-trend", "figure"),
@@ -384,7 +509,7 @@ def update_dashboard(borough, sqft_range, selected_year):
 
     metrics = {
         "Annual Income": {"column": "Income", "color": COLORS["Income"]},
-        "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]},
+        # "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]},
         "Transportation": {"column": "Transportation_Expense", "color": COLORS["Transportation"]},
         "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]}
     }
