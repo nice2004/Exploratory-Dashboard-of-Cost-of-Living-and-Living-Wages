@@ -37,5 +37,9 @@ Living_Wage_Dashboard.py has three main parts that makes the visual display effe
 2. 
 3. Call back: In my call back function, 
 
+## Source of the Data
+1. FRED
+2. 
+
 And I finally called the main() function to run the code.
 
