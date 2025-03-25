@@ -4,9 +4,8 @@ from dash import Dash, dcc, html, dash_table, Input, Output, callback
 import plotly.graph_objects as go
 from Words_in_tabs import About_text, Fun_Wonder_Text, footer
 import plotly.express as px
-import os
+from dash.dependencies import Input, Output
 
-# Define file paths
 file_path1 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets'
               '/Cost-of-transportation-expenses.xlsx')
 file_path2 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets/household'
@@ -17,38 +16,36 @@ file_path4 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-a
               '-Dataset.csv')
 
 
-# Load and preprocess data
 def load_data():
-    dataset_1 = pd.read_excel(file_path1, sheet_name='Annual')
-    dataset_2 = pd.read_excel(file_path2, sheet_name='Quarterly')
-    dataset_3 = pd.read_excel(file_path3, sheet_name='Annual')
-    dataset_4 = pd.read_csv(file_path4)
+    data_set1 = pd.read_excel(file_path1, sheet_name='Annual')
+    data_set2 = pd.read_excel(file_path2, sheet_name='Quarterly')
+    data_set3 = pd.read_excel(file_path3, sheet_name='Annual')
+    data_set4 = pd.read_csv(file_path4)
 
-    for df in [dataset_1, dataset_2, dataset_3]:
+    for df in [data_set1, data_set2, data_set3]:
         if 'observation_date' in df.columns:
             df['observation_date'] = pd.to_datetime(df['observation_date']).dt.year
 
-    for df in [dataset_1, dataset_2, dataset_3]:
-        df.drop_duplicates(subset='observation_date', keep='first', inplace=True)
-    datasets = [dataset_1.set_index('observation_date'),
-                dataset_2.set_index('observation_date'),
-                dataset_3.set_index('observation_date')]
-
-    merged_dataset = pd.concat(datasets, axis=1, join='outer').reset_index()
+    # merging datasets
+    merged_dataset = pd.merge(data_set1, data_set2, on='observation_date', how='outer')
+    merged_dataset = pd.merge(merged_dataset, data_set3, on='observation_date', how='outer')
 
     years = merged_dataset['observation_date'].unique()
     housing_years = []
 
     for year in years:
-        temp_df = dataset_4.copy()
+        temp_df = data_set4.copy()
         temp_df['observation_date'] = year
         housing_years.append(temp_df)
 
     housing_with_years = pd.concat(housing_years, ignore_index=True)
     final_dataset = pd.merge(merged_dataset, housing_with_years, on='observation_date', how='inner')
+
     final_dataset = final_dataset.ffill().bfill()
 
     final_dataset['PRICE_PER_SQFT'] = final_dataset['PRICE'] / final_dataset['PROPERTYSQFT']
+
+    # Calculate key expense ratios
     final_dataset['Housing_Income_Ratio'] = final_dataset['PRICE'] / final_dataset['Income']
     final_dataset['Transport_Income_Ratio'] = final_dataset['Transportation_Expense'] / final_dataset['Income']
     final_dataset['Goods_Income_Ratio'] = final_dataset['Durable_Goods'] / final_dataset['Income']
@@ -56,12 +53,14 @@ def load_data():
                                             final_dataset['Transportation_Expense'] +
                                             final_dataset['Durable_Goods']) / final_dataset['Income']
 
+    print(final_dataset.head())
+    print(final_dataset.columns)
+
     return final_dataset
 
 
 merged_dataset = load_data()
 
-# Defining colors
 COLORS = {
     "Income": "#3cb521",
     "Housing": "#fd7e14",
@@ -70,10 +69,10 @@ COLORS = {
     "background": "whitesmoke",
 }
 
-# Initialize Dash app
-app = Dash(__name__, external_stylesheets=[dbc.themes.JOURNAL, dbc.icons.FONT_AWESOME])
+app = Dash(__name__,
+           external_stylesheets=[dbc.themes.JOURNAL, dbc.icons.FONT_AWESOME])
 
-# Create data table
+# creating the data table
 outcomes_table = dash_table.DataTable(
     id="outcomes-table",
     columns=[{"id": "observation_date", "name": "Year", "type": "text"}] +
@@ -111,7 +110,7 @@ outcomes_table = dash_table.DataTable(
     ]
 )
 
-# Create dropdowns for filtering
+# NYC Dropdowns
 boroughs_dropdown = dcc.Dropdown(
     id='nyc-counties',
     options=[{'label': str(i), 'value': i} for i in sorted(merged_dataset['SUBLOCALITY'].unique())],
@@ -120,8 +119,7 @@ boroughs_dropdown = dcc.Dropdown(
     style={'width': '100%'}
 )
 
-# Property dropdown removed as requested
-
+# housing slider
 sqft_slider = dcc.RangeSlider(
     id='sqft-slider',
     min=int(merged_dataset['PROPERTYSQFT'].min()),
@@ -136,6 +134,7 @@ sqft_slider = dcc.RangeSlider(
     tooltip={"placement": "bottom", "always_visible": True}
 )
 
+# year slider
 year_slider = dcc.Slider(
     id='year-slider',
     min=merged_dataset['observation_date'].min(),
@@ -174,6 +173,7 @@ filter_card = dbc.Card([
     ])
 ])
 
+# measures the expense to income ratio
 metrics_card = dbc.Card([
     dbc.CardHeader("Key Metrics", className="text-center"),
     dbc.CardBody([
@@ -200,9 +200,8 @@ metrics_card = dbc.Card([
     ])
 ])
 
-# Expense breakdown card removed as requested
+# ====================================== Tabs
 
-# Create tabs layout
 tabs = dbc.Tabs([
     dbc.Tab([
         dbc.Card([
@@ -281,7 +280,8 @@ tabs = dbc.Tabs([
     ], tab_id="results-tab", label="Results"),
 ], id="tabs", active_tab="explorer-tab", className="mt-2")
 
-# Main app layout
+# ========================================= App Layout
+
 app.layout = dbc.Container([
     dbc.Row([
         dbc.Col(html.H2("Nice Teta Hirwa — CS150 — Professor Mike Ryu",
@@ -295,7 +295,6 @@ app.layout = dbc.Container([
         dbc.Col(tabs, width=12, lg=5, className="mt-4"),
         dbc.Col([
             dcc.Graph(id="expense-chart", className="mb-4 shadow"),
-            # Expense ratio chart removed as requested
             dcc.Graph(id="historical-trend", className="mb-4 shadow"),
             html.Hr(),
             html.H6(footer, className="my-2 text-center text-muted"),
@@ -304,7 +303,7 @@ app.layout = dbc.Container([
 ], fluid=True, className="mb-5")
 
 
-# Helper functions
+# ================= Functions
 def get_affordability_rating(ratio):
     """Determine if cost of living is affordable based on total expense to income ratio"""
     if ratio < 0.5:
@@ -319,7 +318,6 @@ def get_affordability_rating(ratio):
         return "Expensive", "text-danger"
 
 
-# Default empty figures
 def empty_bar_chart():
     fig = go.Figure()
     fig.update_layout(
@@ -350,7 +348,9 @@ def empty_line_chart():
     return fig
 
 
-# ==================== Callbacks
+# ==================================================================== Callbacks
+# for updating the dashboard
+
 
 @callback(
     [Output("expense-chart", "figure"),
@@ -443,12 +443,13 @@ def update_dashboard(borough, sqft_range, selected_year):
         "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]}
     }
 
+    # Create traces with corrected logic
     for label, info in metrics.items():
         if label == "Housing Price":
-
+            # Use constant value for Housing Price across all years
             y_values = [constant_housing_price] * len(historical_data["observation_date"])
         else:
-
+            # Use dynamic column values for other metrics
             y_values = historical_data[info["column"]]
 
         line_fig.add_trace(go.Scatter(
@@ -471,6 +472,7 @@ def update_dashboard(borough, sqft_range, selected_year):
         margin=dict(t=100, b=50, l=50, r=50)
     )
 
+    # Prepare table data
     table_data = historical_data.sort_values("observation_date", ascending=False).copy()
     table_data = table_data.replace([float('inf'), float('-inf')], float('nan'))
 
@@ -505,6 +507,7 @@ def update_dashboard(borough, sqft_range, selected_year):
     )
 
 
+# for predicting the county
 @callback(
     Output("prediction-results", "children"),
     [Input("predict-button", "n_clicks")],
@@ -561,7 +564,7 @@ def predict_county(n_clicks, income, goods, transport):
     ]
 
     # Additional context based on the predictions
-    if len({income_county, goods_county, transport_county}) == 1:
+    if len(set([income_county, goods_county, transport_county])) == 1:
         results.append(
             dbc.Alert(
                 f"Interesting! All your inputs closely match the data for {income_county} County.",
