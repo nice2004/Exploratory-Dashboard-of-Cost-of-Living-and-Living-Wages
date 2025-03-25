@@ -1,45 +1,54 @@
-
 import pandas as pd
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, dash_table, Input, Output, callback
 import plotly.graph_objects as go
 from Words_in_tabs import About_text, Fun_Wonder_Text, footer
 import plotly.express as px
-from dash.dependencies import Input, Output
+import os
+
+# Define file paths
+file_path1 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets'
+              '/Cost-of-transportation-expenses.xlsx')
+file_path2 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets/household'
+              '-goods-dataset.xlsx')
+file_path3 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets/Median-Income'
+              '-Dataset.xlsx')
+file_path4 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets/NY-House'
+              '-Dataset.csv')
 
 
+# Load and preprocess data
 def load_data():
-    data_set1 = pd.read_excel('Cost-of-transportation-expenses.xlsx', sheet_name='Annual')
-    data_set2 = pd.read_excel('household-goods-dataset.xlsx', sheet_name='Quarterly')
-    data_set3 = pd.read_excel('Median-Income-Dataset.xlsx', sheet_name='Annual')
-    data_set4 = pd.read_csv('NY-House-Dataset.csv')
+    dataset_1 = pd.read_excel(file_path1, sheet_name='Annual')
+    dataset_2 = pd.read_excel(file_path2, sheet_name='Quarterly')
+    dataset_3 = pd.read_excel(file_path3, sheet_name='Annual')
+    dataset_4 = pd.read_csv(file_path4)
 
-    for df in [data_set1, data_set2, data_set3]:
+    for df in [dataset_1, dataset_2, dataset_3]:
         if 'observation_date' in df.columns:
             df['observation_date'] = pd.to_datetime(df['observation_date']).dt.year
 
-    # Merge datasets
-    merged_dataset = pd.merge(data_set1, data_set2, on='observation_date', how='outer')
-    merged_dataset = pd.merge(merged_dataset, data_set3, on='observation_date', how='outer')
+    for df in [dataset_1, dataset_2, dataset_3]:
+        df.drop_duplicates(subset='observation_date', keep='first', inplace=True)
+    datasets = [dataset_1.set_index('observation_date'),
+                dataset_2.set_index('observation_date'),
+                dataset_3.set_index('observation_date')]
+
+    merged_dataset = pd.concat(datasets, axis=1, join='outer').reset_index()
 
     years = merged_dataset['observation_date'].unique()
     housing_years = []
 
     for year in years:
-        temp_df = data_set4.copy()
+        temp_df = dataset_4.copy()
         temp_df['observation_date'] = year
         housing_years.append(temp_df)
 
     housing_with_years = pd.concat(housing_years, ignore_index=True)
     final_dataset = pd.merge(merged_dataset, housing_with_years, on='observation_date', how='inner')
-
-    # Fill missing values appropriately
     final_dataset = final_dataset.ffill().bfill()
 
-    # Calculate square foot price
     final_dataset['PRICE_PER_SQFT'] = final_dataset['PRICE'] / final_dataset['PROPERTYSQFT']
-
-    # Calculate key expense ratios
     final_dataset['Housing_Income_Ratio'] = final_dataset['PRICE'] / final_dataset['Income']
     final_dataset['Transport_Income_Ratio'] = final_dataset['Transportation_Expense'] / final_dataset['Income']
     final_dataset['Goods_Income_Ratio'] = final_dataset['Durable_Goods'] / final_dataset['Income']
@@ -47,16 +56,12 @@ def load_data():
                                             final_dataset['Transportation_Expense'] +
                                             final_dataset['Durable_Goods']) / final_dataset['Income']
 
-    print(final_dataset.head())
-    print(final_dataset.columns)
-
     return final_dataset
 
 
-# Load data
 merged_dataset = load_data()
 
-# Define colors
+# Defining colors
 COLORS = {
     "Income": "#3cb521",
     "Housing": "#fd7e14",
@@ -66,8 +71,7 @@ COLORS = {
 }
 
 # Initialize Dash app
-app = Dash(__name__,
-           external_stylesheets=[dbc.themes.JOURNAL, dbc.icons.FONT_AWESOME])
+app = Dash(__name__, external_stylesheets=[dbc.themes.JOURNAL, dbc.icons.FONT_AWESOME])
 
 # Create data table
 outcomes_table = dash_table.DataTable(
@@ -346,82 +350,7 @@ def empty_line_chart():
     return fig
 
 
-# Callbacks
-# Define callback to update the layout and charts
-
-@callback(
-    Output("prediction-results", "children"),
-    [Input("predict-button", "n_clicks")],
-    [
-        Input("income-input", "value"),
-        Input("goods-input", "value"),
-        Input("transport-input", "value")
-    ],
-    prevent_initial_call=True
-)
-def predict_county(n_clicks, income, goods, transport):
-    if not all([income, goods, transport]):
-        return dbc.Alert("Please fill in all input fields.", color="warning")
-
-    # Find the closest matches in the dataset
-    def find_closest_match(input_value, column):
-        differences = abs(merged_dataset[column] - input_value)
-        closest_index = differences.idxmin()
-        return merged_dataset.loc[closest_index, 'SUBLOCALITY'], merged_dataset.loc[closest_index, column]
-
-    # Find closest counties for each input
-    income_county, income_match = find_closest_match(income, 'Income')
-    goods_county, goods_match = find_closest_match(goods, 'Durable_Goods')
-    transport_county, transport_match = find_closest_match(transport, 'Transportation_Expense')
-
-    # Create results
-    results = [
-        dbc.Card([
-            dbc.CardHeader("Prediction Results", className="text-center"),
-            dbc.CardBody([
-                html.H5("Based on Your Inputs:", className="card-title mb-3"),
-
-                dbc.Row([
-                    dbc.Col([
-                        html.H6("Income Prediction", className="text-muted"),
-                        html.P(f"County: {income_county}"),
-                        html.P(f"Matched Income: ${income_match:,.0f}")
-                    ], width=4),
-
-                    dbc.Col([
-                        html.H6("Goods Expenses Prediction", className="text-muted"),
-                        html.P(f"County: {goods_county}"),
-                        html.P(f"Matched Goods Expenses: ${goods_match:,.0f}")
-                    ], width=4),
-
-                    dbc.Col([
-                        html.H6("Transportation Expenses Prediction", className="text-muted"),
-                        html.P(f"County: {transport_county}"),
-                        html.P(f"Matched Transport Expenses: ${transport_match:,.0f}")
-                    ], width=4)
-                ])
-            ])
-        ], className="mt-3")
-    ]
-
-    # Additional context based on the predictions
-    if len(set([income_county, goods_county, transport_county])) == 1:
-        results.append(
-            dbc.Alert(
-                f"Interesting! All your inputs closely match the data for {income_county} County.",
-                color="success"
-            )
-        )
-    else:
-        results.append(
-            dbc.Alert(
-                "Your inputs match different counties. This could indicate variations in living costs across NYC.",
-                color="info"
-            )
-        )
-
-    return results
-
+# ==================== Callbacks
 
 @callback(
     [Output("expense-chart", "figure"),
@@ -514,13 +443,12 @@ def update_dashboard(borough, sqft_range, selected_year):
         "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]}
     }
 
-    # Create traces with corrected logic
     for label, info in metrics.items():
         if label == "Housing Price":
-            # Use constant value for Housing Price across all years
+
             y_values = [constant_housing_price] * len(historical_data["observation_date"])
         else:
-            # Use dynamic column values for other metrics
+
             y_values = historical_data[info["column"]]
 
         line_fig.add_trace(go.Scatter(
@@ -543,7 +471,6 @@ def update_dashboard(borough, sqft_range, selected_year):
         margin=dict(t=100, b=50, l=50, r=50)
     )
 
-    # Prepare table data
     table_data = historical_data.sort_values("observation_date", ascending=False).copy()
     table_data = table_data.replace([float('inf'), float('-inf')], float('nan'))
 
@@ -576,6 +503,80 @@ def update_dashboard(borough, sqft_range, selected_year):
         f"card-title {affordability_class}",
         " ".join(affordability_text)
     )
+
+
+@callback(
+    Output("prediction-results", "children"),
+    [Input("predict-button", "n_clicks")],
+    [
+        Input("income-input", "value"),
+        Input("goods-input", "value"),
+        Input("transport-input", "value")
+    ],
+    prevent_initial_call=True
+)
+def predict_county(n_clicks, income, goods, transport):
+    if not all([income, goods, transport]):
+        return dbc.Alert("Please fill in all input fields.", color="warning")
+
+    # Find the closest matches in the dataset
+    def find_closest_match(input_value, column):
+        differences = abs(merged_dataset[column] - input_value)
+        closest_index = differences.idxmin()
+        return merged_dataset.loc[closest_index, 'SUBLOCALITY'], merged_dataset.loc[closest_index, column]
+
+    # Find closest counties for each input
+    income_county, income_match = find_closest_match(income, 'Income')
+    goods_county, goods_match = find_closest_match(goods, 'Durable_Goods')
+    transport_county, transport_match = find_closest_match(transport, 'Transportation_Expense')
+
+    # Create results
+    results = [
+        dbc.Card([
+            dbc.CardHeader("Prediction Results", className="text-center"),
+            dbc.CardBody([
+                html.H5("Based on Your Inputs:", className="card-title mb-3"),
+
+                dbc.Row([
+                    dbc.Col([
+                        html.H6("Income Prediction", className="text-muted"),
+                        html.P(f"County: {income_county}"),
+                        html.P(f"Matched Income: ${income_match:,.0f}")
+                    ], width=4),
+
+                    dbc.Col([
+                        html.H6("Goods Expenses Prediction", className="text-muted"),
+                        html.P(f"County: {goods_county}"),
+                        html.P(f"Matched Goods Expenses: ${goods_match:,.0f}")
+                    ], width=4),
+
+                    dbc.Col([
+                        html.H6("Transportation Expenses Prediction", className="text-muted"),
+                        html.P(f"County: {transport_county}"),
+                        html.P(f"Matched Transport Expenses: ${transport_match:,.0f}")
+                    ], width=4)
+                ])
+            ])
+        ], className="mt-3")
+    ]
+
+    # Additional context based on the predictions
+    if len({income_county, goods_county, transport_county}) == 1:
+        results.append(
+            dbc.Alert(
+                f"Interesting! All your inputs closely match the data for {income_county} County.",
+                color="success"
+            )
+        )
+    else:
+        results.append(
+            dbc.Alert(
+                "Your inputs match different counties. This could indicate variations in living costs across NYC.",
+                color="info"
+            )
+        )
+
+    return results
 
 
 if __name__ == '__main__':
