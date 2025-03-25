@@ -33,13 +33,16 @@ This dashboard also served as a good remainder that where you live is highly det
 
 ## Explaining the coding part of the project
 Living_Wage_Dashboard.py has three main parts that makes the visual display effective. 
-1.  
-2. 
-3. Call back: In my call back function, 
+1. Load_data: Merging datasets, I merged all four datasets together and calculate the averages of their income 
+2. Create: In creating part, I Create_data table that will go into the results tab, create dropdowns for NYC counties in the cost of living explorer
+tab, sqft slider for square feet, create filter cards, and create tabs and app_layout that put all cards into shape.
+3. Call back: In my call back function, I have two call backs, one is for predicting results it predicts the county and finds the closest match 
+according to the user's income, expenses and durable goods. Another one is for updating the whole dashboard. This one adds updates the 
+bar chart and the line graph as a user changes the dropdowns and sliders. 
 
 ## Source of the Data
-1. FRED
-2. 
+1. FRED: https://fred.stlouisfed.org/series/DTRSRC1A027NBEA, https://fred.stlouisfed.org/series/BOGZ1LM155111005Q
+2. Kaggle: https://www.kaggle.com/datasets/nelgiriyewithana/new-york-housing-market/data
 
 And I finally called the main() function to run the code.
 
