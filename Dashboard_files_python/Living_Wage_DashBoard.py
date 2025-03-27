@@ -430,6 +430,7 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
     if 'observation_date' not in selected_dataset.columns:
         line_fig = empty_line_chart()
     else:
+         # when errors='coerce' is applied, any value that cannot be converted to the desired data type will be replaced with a "Not a Number" value (NaN).
         selected_dataset['observation_date'] = pd.to_numeric(selected_dataset['observation_date'], errors='coerce')
 
         # Sort the dataset by observation_date 
