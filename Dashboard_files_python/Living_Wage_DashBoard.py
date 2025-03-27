@@ -390,8 +390,6 @@ def empty_line_chart():
      Input("dataset-dropdown", "value")]
 )
 def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
-    # Historical trends chart (Line chart: based on selected dataset)
-    # Historical trends chart (Line chart: based on selected dataset)
     line_fig = go.Figure()
 
     # Select the appropriate dataset and trend columns
@@ -429,14 +427,12 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
     print("Observation Dates:", selected_dataset['observation_date'].unique())
     print("Dataset Shape:", selected_dataset.shape)
 
-    # Ensure observation_date is properly formatted
     if 'observation_date' not in selected_dataset.columns:
         line_fig = empty_line_chart()
     else:
-        # Ensure observation_date is numeric
         selected_dataset['observation_date'] = pd.to_numeric(selected_dataset['observation_date'], errors='coerce')
 
-        # Sort the dataset by observation_date to ensure correct plotting
+        # Sort the dataset by observation_date 
         selected_dataset = selected_dataset.sort_values('observation_date')
 
         # Create the line graph
@@ -473,12 +469,12 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
         )
 
 
-    # PART 2: Rest of the logic for filtering by year, calculating averages, and preparing output
+    # PART 2: the logic for filtering by year, calculating averages, and preparing output
     filtered_data = merged_dataset[
         (merged_dataset["observation_date"] == selected_year) &
         (merged_dataset["PROPERTYSQFT"] >= sqft_range[0]) &
         (merged_dataset["PROPERTYSQFT"] <= sqft_range[1])
-        ]  # Applying filters based on year and sqft (if needed)
+        ]  # Applying filters based on year and sqft 
 
     if filtered_data.empty:
         empty_outputs = [
@@ -486,7 +482,7 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
         ]
         return empty_outputs
 
-    # Calculate key metrics
+    # calculating  key metrics
     avg_price = filtered_data["PRICE"].mean()
     avg_price_per_sqft = filtered_data["PRICE_PER_SQFT"].mean()
     avg_income = filtered_data["Income"].mean()
@@ -499,7 +495,7 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
     goods_income_ratio = avg_goods / avg_income if avg_income > 0 else 0
     total_expense_ratio = housing_income_ratio + transport_income_ratio + goods_income_ratio
 
-    # Get affordability rating
+    # affordability rating
     affordability_label, affordability_class = get_affordability_rating(total_expense_ratio)
 
     # Expense chart (Bar chart: Income vs Housing)
