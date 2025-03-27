@@ -1,10 +1,8 @@
 import pandas as pd
-import matplotlib.pyplot as plt
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, dash_table, Input, Output, callback
 import plotly.graph_objects as go
 from Words_in_tabs import About_text, Fun_Wonder_Text, footer
-import plotly.express as px
 from dash.dependencies import Input, Output
 
 file_path1 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets'
@@ -20,7 +18,6 @@ data_set1 = None
 data_set2 = None
 data_set3 = None
 data_set4 = None
-
 
 def load_data():
     global data_set1, data_set2, data_set3, data_set4
@@ -476,12 +473,6 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
             margin=dict(t=100, b=50, l=50, r=50)
         )
 
-    # Fallback to empty chart if no traces were added
-    if len(line_fig.data) == 0:
-        line_fig = empty_line_chart()
-    # Fallback to empty chart if no traces were added
-    if len(line_fig.data) == 0:
-        line_fig = empty_line_chart()
 
     # PART 2: Rest of the logic for filtering by year, calculating averages, and preparing output
     filtered_data = merged_dataset[
