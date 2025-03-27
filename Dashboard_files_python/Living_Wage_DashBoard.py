@@ -1,3 +1,4 @@
+
 import pandas as pd
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, dash_table, Input, Output, callback
@@ -433,7 +434,7 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
          # when errors='coerce' is applied, any value that cannot be converted to the desired data type will be replaced with a "Not a Number" value (NaN).
         selected_dataset['observation_date'] = pd.to_numeric(selected_dataset['observation_date'], errors='coerce')
 
-        # Sort the dataset by observation_date 
+        # Sort the dataset by observation_date
         selected_dataset = selected_dataset.sort_values('observation_date')
 
         # Create the line graph
@@ -463,7 +464,7 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
                 range=[selected_dataset['observation_date'].min(),
                        selected_dataset['observation_date'].max()],
                 tick0=selected_dataset['observation_date'].min(),
-                dtick=5
+                dtick=10
             ),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(t=100, b=50, l=50, r=50)
@@ -475,7 +476,7 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
         (merged_dataset["observation_date"] == selected_year) &
         (merged_dataset["PROPERTYSQFT"] >= sqft_range[0]) &
         (merged_dataset["PROPERTYSQFT"] <= sqft_range[1])
-        ]  # Applying filters based on year and sqft 
+        ]  # Applying filters based on year and sqft
 
     if filtered_data.empty:
         empty_outputs = [
