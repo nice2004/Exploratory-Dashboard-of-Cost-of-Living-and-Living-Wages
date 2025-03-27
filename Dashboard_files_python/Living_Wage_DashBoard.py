@@ -6,13 +6,13 @@ import plotly.graph_objects as go
 from Words_in_tabs import About_text, Fun_Wonder_Text, footer
 from dash.dependencies import Input, Output
 
-file_path1 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets'
+file_path1 = ('./Datasets'
               '/Cost-of-transportation-expenses.xlsx')
-file_path2 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets/household'
+file_path2 = ('./Datasets/household'
               '-goods-dataset.xlsx')
-file_path3 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets/Median-Income'
+file_path3 = ('./Datasets/Median-Income'
               '-Dataset.xlsx')
-file_path4 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets/NY-House'
+file_path4 = ('./Datasets/NY-House'
               '-Dataset.csv')
 
 data_set1 = None
