@@ -44,5 +44,10 @@ bar chart and the line graph as a user changes the dropdowns and sliders.
 1. FRED: https://fred.stlouisfed.org/series/DTRSRC1A027NBEA, https://fred.stlouisfed.org/series/BOGZ1LM155111005Q
 2. Kaggle: https://www.kaggle.com/datasets/nelgiriyewithana/new-york-housing-market/data
 
+## Changes I have implemented per the feedback 
+
+1. For the speed, I changed/rearranged callbacks, and changed my code for the line chart so that it can reduce the time it takes to run. 
+2. Told me to space out the years on my historical trend, and I did that! I implemented a 5-year gap between graphs
+
 And I finally called the main() function to run the code.
 

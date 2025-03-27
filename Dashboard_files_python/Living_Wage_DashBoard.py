@@ -1,4 +1,5 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 import dash_bootstrap_components as dbc
 from dash import Dash, dcc, html, dash_table, Input, Output, callback
 import plotly.graph_objects as go
@@ -15,8 +16,14 @@ file_path3 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-a
 file_path4 = ('/home/nice/CS-150 Files/Exploratory-Dashboard-of-Cost-of-Living-and-Living-Wages/Datasets/NY-House'
               '-Dataset.csv')
 
+data_set1 = None
+data_set2 = None
+data_set3 = None
+data_set4 = None
+
 
 def load_data():
+    global data_set1, data_set2, data_set3, data_set4
     data_set1 = pd.read_excel(file_path1, sheet_name='Annual')
     data_set2 = pd.read_excel(file_path2, sheet_name='Quarterly')
     data_set3 = pd.read_excel(file_path3, sheet_name='Annual')
@@ -39,7 +46,8 @@ def load_data():
         housing_years.append(temp_df)
 
     housing_with_years = pd.concat(housing_years, ignore_index=True)
-    final_dataset = pd.merge(merged_dataset, housing_with_years, on='observation_date', how='inner')
+    final_dataset = pd.merge(merged_dataset, housing_with_years, on='observation_date', how='inner').dropna(
+        subset=['observation_date'])
 
     final_dataset = final_dataset.ffill().bfill()
 
@@ -119,6 +127,19 @@ boroughs_dropdown = dcc.Dropdown(
     style={'width': '100%'}
 )
 
+# dropdown for data selection
+
+dataset_dropdown = dcc.Dropdown(
+    id='dataset-dropdown',
+    options=[{'label': 'Cost of Transportation', 'value': 'dataset1'},
+             {'label': 'Household Goods', 'value': 'dataset2'},
+             {'label': 'Median Income', 'value': 'dataset3'},
+             {'label': 'NY House Dataset', 'value': 'dataset4'}],
+    value='dataset1',
+    clearable=False,
+    style={'width': '100%'}
+)
+
 # housing slider
 sqft_slider = dcc.RangeSlider(
     id='sqft-slider',
@@ -172,7 +193,12 @@ filter_card = dbc.Card([
         ]),
     ])
 ])
-
+dataset_card = dbc.Card([
+    dbc.CardHeader("Select Dataset to Compare"),
+    dbc.CardBody([
+        dataset_dropdown
+    ])
+])
 # measures the expense to income ratio
 metrics_card = dbc.Card([
     dbc.CardHeader("Key Metrics", className="text-center"),
@@ -265,6 +291,7 @@ tabs = dbc.Tabs([
             dbc.CardBody([Fun_Wonder_Text])
         ], className="mt-3"),
         filter_card,
+        dataset_card,
         metrics_card,
         html.Div(className="my-3"),  # Spacer
     ], tab_id="explorer-tab", label="Cost of Living Explorer", active_label_class_name="fw-bold"),
@@ -349,7 +376,7 @@ def empty_line_chart():
 
 
 # ==================================================================== Callbacks
-
+# for updating the dashboard
 
 
 @callback(
@@ -363,42 +390,118 @@ def empty_line_chart():
      Output("affordability-text", "children")],
     [Input("nyc-counties", "value"),
      Input("sqft-slider", "value"),
-     Input("year-slider", "value")]
+     Input("year-slider", "value"),
+     Input("dataset-dropdown", "value")]
 )
-def update_dashboard(borough, sqft_range, selected_year):
+def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
+    # Historical trends chart (Line chart: based on selected dataset)
+    # Historical trends chart (Line chart: based on selected dataset)
+    line_fig = go.Figure()
 
+    # Select the appropriate dataset and trend columns
+    if dataset_choice == "dataset1":
+        selected_dataset = data_set1
+        trend_columns = {
+            "Transportation Expense": {"column": "Transportation_Expense", "color": COLORS["Transportation"]},
+            "Income": {"column": "Income", "color": COLORS["Income"]}
+        }
+    elif dataset_choice == "dataset2":
+        selected_dataset = data_set2
+        trend_columns = {
+            "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]},
+            "Income": {"column": "Income", "color": COLORS["Income"]}
+        }
+    elif dataset_choice == "dataset3":
+        selected_dataset = data_set3
+        trend_columns = {
+            "Income": {"column": "Income", "color": COLORS["Income"]},
+            "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]}
+        }
+    elif dataset_choice == "dataset4":
+        selected_dataset = data_set4
+        trend_columns = {
+            "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]},
+            "Price per Sq Ft": {"column": "PRICE_PER_SQFT", "color": "#ff6b6b"}
+        }
+    else:
+        selected_dataset = merged_dataset
+        trend_columns = {}
+
+    # Debug print statements
+    print("Dataset Choice:", dataset_choice)
+    print("Selected Dataset Columns:", selected_dataset.columns)
+    print("Observation Dates:", selected_dataset['observation_date'].unique())
+    print("Dataset Shape:", selected_dataset.shape)
+
+    # Ensure observation_date is properly formatted
+    if 'observation_date' not in selected_dataset.columns:
+        line_fig = empty_line_chart()
+    else:
+        # Ensure observation_date is numeric
+        selected_dataset['observation_date'] = pd.to_numeric(selected_dataset['observation_date'], errors='coerce')
+
+        # Sort the dataset by observation_date to ensure correct plotting
+        selected_dataset = selected_dataset.sort_values('observation_date')
+
+        # Create the line graph
+        for label, info in trend_columns.items():
+            # Check if the column exists in the selected dataset
+            if info["column"] in selected_dataset.columns:
+                line_fig.add_trace(go.Scatter(
+                    x=selected_dataset['observation_date'],
+                    y=selected_dataset[info["column"]],
+                    mode="lines+markers",
+                    name=label,
+                    line=dict(color=info["color"], width=3),
+                    marker=dict(size=8)
+                ))
+
+        # Update layout for the line figure
+        line_fig.update_layout(
+            title=f"{dataset_choice.replace('dataset', 'Dataset ')} Historical Trends",
+            height=400,
+            template="plotly_white",
+            yaxis=dict(title="Amount ($)", tickprefix="$", tickformat=","),
+            xaxis=dict(
+                title="Year",
+                type='linear',  # Explicitly set linear type
+                tickmode="linear",
+                # Use the actual min and max years from the dataset
+                range=[selected_dataset['observation_date'].min(),
+                       selected_dataset['observation_date'].max()],
+                tick0=selected_dataset['observation_date'].min(),
+                dtick=5
+            ),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(t=100, b=50, l=50, r=50)
+        )
+
+    # Fallback to empty chart if no traces were added
+    if len(line_fig.data) == 0:
+        line_fig = empty_line_chart()
+    # Fallback to empty chart if no traces were added
+    if len(line_fig.data) == 0:
+        line_fig = empty_line_chart()
+
+    # PART 2: Rest of the logic for filtering by year, calculating averages, and preparing output
     filtered_data = merged_dataset[
-        (merged_dataset["SUBLOCALITY"] == borough) &
+        (merged_dataset["observation_date"] == selected_year) &
         (merged_dataset["PROPERTYSQFT"] >= sqft_range[0]) &
         (merged_dataset["PROPERTYSQFT"] <= sqft_range[1])
-        ]
+        ]  # Applying filters based on year and sqft (if needed)
 
     if filtered_data.empty:
         empty_outputs = [
-            empty_bar_chart(), empty_line_chart(), [],
-            "$0", "$0/sqft", "N/A", "card-title",
-            "No data available"
-        ]
-        return empty_outputs
-
-
-    current_year_data = filtered_data[filtered_data["observation_date"] == selected_year]
-    historical_data = filtered_data.sort_values("observation_date")
-
-    if current_year_data.empty:
-        empty_outputs = [
-            empty_bar_chart(), empty_line_chart(), [],
-            "$0", "$0/sqft", "N/A", "card-title",
-            "No data available for selected year"
+            empty_bar_chart(), empty_line_chart(), [], "$0", "$0/sqft", "N/A", "card-title", "No data available"
         ]
         return empty_outputs
 
     # Calculate key metrics
-    avg_price = current_year_data["PRICE"].mean()
-    avg_price_per_sqft = current_year_data["PRICE_PER_SQFT"].mean()
-    avg_income = current_year_data["Income"].mean()
-    avg_transport = current_year_data["Transportation_Expense"].mean()
-    avg_goods = current_year_data["Durable_Goods"].mean()
+    avg_price = filtered_data["PRICE"].mean()
+    avg_price_per_sqft = filtered_data["PRICE_PER_SQFT"].mean()
+    avg_income = filtered_data["Income"].mean()
+    avg_transport = filtered_data["Transportation_Expense"].mean()
+    avg_goods = filtered_data["Durable_Goods"].mean()
 
     # Calculate expense ratios
     housing_income_ratio = avg_price / avg_income if avg_income > 0 else 0
@@ -409,10 +512,8 @@ def update_dashboard(borough, sqft_range, selected_year):
     # Get affordability rating
     affordability_label, affordability_class = get_affordability_rating(total_expense_ratio)
 
-
+    # Expense chart (Bar chart: Income vs Housing)
     expense_fig = go.Figure()
-
-    # Use a list to ensure consistent order
     categories = ["Income", "Housing"]
     values = [avg_income, avg_price]
     colors = [COLORS["Income"], COLORS["Housing"]]
@@ -433,27 +534,24 @@ def update_dashboard(borough, sqft_range, selected_year):
         margin=dict(t=100, b=50, l=50, r=50)
     )
 
+    # Historical trends chart (Line chart: Housing Price, Durable Goods)
     line_fig = go.Figure()
-
-
-    constant_housing_price = historical_data["PRICE"].median()  # Use median or any fixed value for stability
+    constant_housing_price = filtered_data["PRICE"].median()
 
     metrics = {
         "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]},
-        "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]}
+        "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]},
     }
 
-    # Create traces with corrected logic
     for label, info in metrics.items():
         if label == "Housing Price":
             # Use constant value for Housing Price across all years
-            y_values = [constant_housing_price] * len(historical_data["observation_date"])
+            y_values = [constant_housing_price] * len(filtered_data["observation_date"])
         else:
-            # Use dynamic column values for other metrics
-            y_values = historical_data[info["column"]]
+            y_values = filtered_data[info["column"]]
 
         line_fig.add_trace(go.Scatter(
-            x=historical_data["observation_date"],
+            x=filtered_data["observation_date"],
             y=y_values,
             mode="lines+markers",
             name=label,
@@ -461,21 +559,20 @@ def update_dashboard(borough, sqft_range, selected_year):
             marker=dict(size=8)
         ))
 
-    # Update layout for the figure
     line_fig.update_layout(
         title="Historical Trends",
         height=400,
         template="plotly_white",
         yaxis=dict(title="Amount ($)", tickprefix="$", tickformat=","),
-        xaxis=dict(title="Year", tickmode="linear", range=[1990, merged_dataset['observation_date'].max()]),
+        xaxis=dict(title="Year", tickmode="linear", range=[1990, filtered_data['observation_date'].max()], tick0=1990,
+                   dtick=5),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         margin=dict(t=100, b=50, l=50, r=50)
     )
 
     # Prepare table data
-    table_data = historical_data.sort_values("observation_date", ascending=False).copy()
+    table_data = filtered_data.sort_values("observation_date", ascending=False).copy()
     table_data = table_data.replace([float('inf'), float('-inf')], float('nan'))
-
     table_data = table_data[[
         "observation_date", "Income", "PRICE", "Transportation_Expense", "Durable_Goods",
         "Housing_Income_Ratio", "Transport_Income_Ratio", "Goods_Income_Ratio", "Total_Expense_Ratio"
