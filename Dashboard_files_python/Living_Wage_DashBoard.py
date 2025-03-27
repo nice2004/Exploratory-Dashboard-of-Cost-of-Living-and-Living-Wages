@@ -521,41 +521,40 @@ def update_dashboard(borough, sqft_range, selected_year, dataset_choice):
         margin=dict(t=100, b=50, l=50, r=50)
     )
 
-    # Historical trends chart (Line chart: Housing Price, Durable Goods)
-    line_fig = go.Figure()
-    constant_housing_price = filtered_data["PRICE"].median()
+    # line_fig = go.Figure()
+    # constant_housing_price = filtered_data["PRICE"].median()
 
-    metrics = {
-        "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]},
-        "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]},
-    }
+   # metrics = {
+    #    "Housing Price": {"column": "PRICE", "color": COLORS["Housing"]},
+     #   "Durable Goods": {"column": "Durable_Goods", "color": COLORS["Goods"]},
+   #  }
 
-    for label, info in metrics.items():
-        if label == "Housing Price":
+    #for label, info in metrics.items():
+     #   if label == "Housing Price":
             # Use constant value for Housing Price across all years
-            y_values = [constant_housing_price] * len(filtered_data["observation_date"])
-        else:
-            y_values = filtered_data[info["column"]]
+      #      y_values = [constant_housing_price] * len(filtered_data["observation_date"])
+       # else:
+        #    y_values = filtered_data[info["column"]]
 
-        line_fig.add_trace(go.Scatter(
-            x=filtered_data["observation_date"],
-            y=y_values,
-            mode="lines+markers",
-            name=label,
-            line=dict(color=info["color"], width=3),
-            marker=dict(size=8)
-        ))
+        # line_fig.add_trace(go.Scatter(
+          #  x=filtered_data["observation_date"],
+           # y=y_values,
+            # mode="lines+markers",
+          #  name=label,
+           # line=dict(color=info["color"], width=3),
+           # marker=dict(size=8)
+        # ))
 
-    line_fig.update_layout(
-        title="Historical Trends",
-        height=400,
-        template="plotly_white",
-        yaxis=dict(title="Amount ($)", tickprefix="$", tickformat=","),
-        xaxis=dict(title="Year", tickmode="linear", range=[1990, filtered_data['observation_date'].max()], tick0=1990,
-                   dtick=5),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(t=100, b=50, l=50, r=50)
-    )
+    # line_fig.update_layout(
+      #  title="Historical Trends",
+       # height=400,
+       # template="plotly_white",
+       # yaxis=dict(title="Amount ($)", tickprefix="$", tickformat=","),
+       # xaxis=dict(title="Year", tickmode="linear", range=[1990, filtered_data['observation_date'].max()], tick0=1990,
+        #           dtick=5),
+        # legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        # margin=dict(t=100, b=50, l=50, r=50)
+    # )
 
     # Prepare table data
     table_data = filtered_data.sort_values("observation_date", ascending=False).copy()
