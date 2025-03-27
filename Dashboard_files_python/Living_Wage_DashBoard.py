@@ -329,7 +329,6 @@ app.layout = dbc.Container([
 
 # ================= Functions
 def get_affordability_rating(ratio):
-    """Determine if cost of living is affordable based on total expense to income ratio"""
     if ratio < 0.5:
         return "Very Affordable", "text-success"
     elif ratio < 0.7:
