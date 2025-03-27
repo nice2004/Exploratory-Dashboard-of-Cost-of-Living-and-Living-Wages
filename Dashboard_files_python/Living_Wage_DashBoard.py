@@ -349,7 +349,7 @@ def empty_line_chart():
 
 
 # ==================================================================== Callbacks
-# for updating the dashboard
+
 
 
 @callback(
@@ -366,7 +366,7 @@ def empty_line_chart():
      Input("year-slider", "value")]
 )
 def update_dashboard(borough, sqft_range, selected_year):
-    # Filter data based on selections (property type filter removed)
+
     filtered_data = merged_dataset[
         (merged_dataset["SUBLOCALITY"] == borough) &
         (merged_dataset["PROPERTYSQFT"] >= sqft_range[0]) &
@@ -381,7 +381,7 @@ def update_dashboard(borough, sqft_range, selected_year):
         ]
         return empty_outputs
 
-    # Filter for current year and historical data
+
     current_year_data = filtered_data[filtered_data["observation_date"] == selected_year]
     historical_data = filtered_data.sort_values("observation_date")
 
@@ -409,7 +409,7 @@ def update_dashboard(borough, sqft_range, selected_year):
     # Get affordability rating
     affordability_label, affordability_class = get_affordability_rating(total_expense_ratio)
 
-    # Create expense comparison chart - BAR CHART (Income vs Square Footage)
+
     expense_fig = go.Figure()
 
     # Use a list to ensure consistent order
@@ -435,7 +435,7 @@ def update_dashboard(borough, sqft_range, selected_year):
 
     line_fig = go.Figure()
 
-    # Fix the value for "Housing Price" (e.g., use a static constant like the median or a specific number)
+
     constant_housing_price = historical_data["PRICE"].median()  # Use median or any fixed value for stability
 
     metrics = {
